@@ -52,10 +52,6 @@
   .dismiss-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; padding: 0; transition: color 0.15s; flex-shrink: 0; }
   .dismiss-btn:hover { color: var(--text); }
 
-  /* ── mode indicator ── */
-  .mode-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; margin-bottom: 20px; }
-  .mode-pill span { color: var(--accent); }
-
   /* ── summary bar ── */
   .summary-bar { display: flex; gap: 28px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
   .summary-item { display: flex; flex-direction: column; gap: 4px; }
@@ -74,12 +70,12 @@
 
   /* ── stock grid ── */
   .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 10px; margin-bottom: 36px; }
-  .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; transition: border-color 0.15s, background 0.15s; animation: fadeIn 0.2s ease; }
+  .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; transition: border-color 0.15s, background 0.15s; animation: fadeIn 0.2s ease; cursor: pointer; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)} }
   .stock-card:hover { border-color: var(--border2); background: var(--surface2); }
   .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
   .ticker { font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: 0.04em; }
-  .remove-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s, border-color 0.15s, color 0.15s; line-height: 1; }
+  .remove-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s, border-color 0.15s, color 0.15s; line-height: 1; z-index: 2; }
   .stock-card:hover .remove-btn { opacity: 1; }
   .remove-btn:hover { border-color: var(--down); color: var(--down); }
   .price { font-family: var(--mono); font-size: 20px; font-weight: 500; margin-bottom: 6px; letter-spacing: -0.02em; }
@@ -87,7 +83,8 @@
   .change-badge.up { background: var(--up-bg); color: var(--up); }
   .change-badge.down { background: var(--down-bg); color: var(--down); }
   .card-name { font-size: 10px; color: var(--muted); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card-error { font-family: var(--mono); font-size: 10px; color: var(--down); margin-top: 6px; opacity: 0.7; }
+  .card-hint { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 10px; letter-spacing: 0.06em; opacity: 0; transition: opacity 0.15s; }
+  .stock-card:hover .card-hint { opacity: 1; }
 
   /* ── skeleton ── */
   .loading-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; overflow: hidden; }
@@ -112,6 +109,92 @@
   .toast.show { opacity: 1; transform: translateY(0); }
   .toast.error { border-color: rgba(240,78,90,0.35); color: var(--down); }
   .toast.success { border-color: rgba(34,217,122,0.35); color: var(--up); }
+
+  /* ── chart modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 300; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s; backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 14px; width: 760px; max-width: calc(100vw - 40px);
+    padding: 0; overflow: hidden;
+    transform: translateY(16px) scale(0.98);
+    transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+  }
+  .modal-title-group { display: flex; align-items: baseline; gap: 12px; }
+  .modal-ticker { font-family: var(--mono); font-size: 18px; font-weight: 600; letter-spacing: 0.04em; }
+  .modal-name { font-size: 12px; color: var(--muted2); }
+  .modal-price-group { display: flex; align-items: baseline; gap: 10px; }
+  .modal-price { font-family: var(--mono); font-size: 22px; font-weight: 500; }
+  .modal-change { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+  .modal-change.up { color: var(--up); }
+  .modal-change.down { color: var(--down); }
+  .modal-close {
+    width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border);
+    background: transparent; color: var(--muted2); font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .modal-close:hover { border-color: var(--border2); color: var(--text); }
+
+  .modal-body { padding: 20px 24px 24px; }
+
+  /* range pills */
+  .range-group { display: flex; gap: 6px; margin-bottom: 18px; }
+  .range-btn {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    padding: 4px 12px; border-radius: 20px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted2); cursor: pointer; letter-spacing: 0.06em;
+    transition: all 0.15s;
+  }
+  .range-btn:hover { border-color: var(--border2); color: var(--text); }
+  .range-btn.active { background: var(--accent-bg); border-color: rgba(79,156,255,0.35); color: var(--accent); }
+
+  /* chart area */
+  .chart-wrap {
+    position: relative; height: 240px; width: 100%;
+  }
+  .chart-loading {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; font-family: var(--mono); font-size: 11px;
+    color: var(--muted); letter-spacing: 0.08em;
+  }
+  .chart-svg { width: 100%; height: 100%; display: block; }
+
+  /* hover crosshair tooltip */
+  .chart-tooltip {
+    position: absolute; top: 0; left: 0;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 6px 10px;
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+    pointer-events: none; opacity: 0; transition: opacity 0.1s;
+    white-space: nowrap; z-index: 10;
+  }
+  .chart-tooltip.visible { opacity: 1; }
+
+  /* stats row */
+  .chart-stats {
+    display: flex; gap: 24px; margin-top: 18px;
+    padding-top: 16px; border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .cstat { display: flex; flex-direction: column; gap: 3px; }
+  .cstat-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .cstat-val { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+  .cstat-val.up { color: var(--up); }
+  .cstat-val.down { color: var(--down); }
 </style>
 </head>
 <body>
@@ -129,8 +212,6 @@
 </div>
 
 <div class="main">
-
-  <!-- Setup banner -->
   <div class="setup-banner" id="setupBanner">
     <div class="setup-banner-content">
       <h3>Connect Live Data via Google Apps Script</h3>
@@ -145,13 +226,11 @@
         <button class="gs-save-btn" onclick="saveGsUrl()">Save & Connect</button>
       </div>
     </div>
-    <button class="dismiss-btn" onclick="dismissBanner()" title="Dismiss (use demo data)">×</button>
+    <button class="dismiss-btn" onclick="dismissBanner()">×</button>
   </div>
 
-  <!-- Summary -->
   <div class="summary-bar" id="summaryBar" style="display:none;"></div>
 
-  <!-- Grid header -->
   <div class="section-header">
     <span class="section-title" id="watchlistLabel">Watching — 0 stocks</span>
     <button class="refresh-btn" id="refreshBtn" onclick="fetchAll()">
@@ -163,29 +242,66 @@
     </button>
   </div>
 
-  <!-- Cards -->
   <div class="stock-grid" id="stockGrid"></div>
 
-  <!-- Add form -->
   <div class="add-form">
     <input class="ticker-input" id="tickerInput" placeholder="Ticker, e.g. AAPL" maxlength="10"
            onkeydown="if(event.key==='Enter')addStock()" />
     <button class="add-btn" onclick="addStock()">+ Add Stock</button>
   </div>
+</div>
 
+<!-- Chart modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title-group">
+          <span class="modal-ticker" id="modalTicker">—</span>
+          <span class="modal-name" id="modalName"></span>
+        </div>
+        <div class="modal-price-group" style="margin-top:4px;">
+          <span class="modal-price" id="modalPrice">—</span>
+          <span class="modal-change" id="modalChange"></span>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="range-group" id="rangeGroup">
+        <button class="range-btn" onclick="setRange('1mo')">1M</button>
+        <button class="range-btn" onclick="setRange('3mo')">3M</button>
+        <button class="range-btn" onclick="setRange('6mo')">6M</button>
+        <button class="range-btn active" onclick="setRange('1y')">1Y</button>
+        <button class="range-btn" onclick="setRange('2y')">2Y</button>
+        <button class="range-btn" onclick="setRange('5y')">5Y</button>
+      </div>
+      <div class="chart-wrap" id="chartWrap">
+        <div class="chart-loading" id="chartLoading">LOADING CHART…</div>
+        <svg class="chart-svg" id="chartSvg" style="display:none;" viewBox="0 0 712 240" preserveAspectRatio="none"></svg>
+        <div class="chart-tooltip" id="chartTooltip"></div>
+      </div>
+      <div class="chart-stats" id="chartStats"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
 // ── state ─────────────────────────────────────────────────────────────────────
-let mode    = 'dollar';
-let tickers = [];
+let mode      = 'dollar';
+let tickers   = [];
 let stockData = {};
-let gsUrl   = '';
+let gsUrl     = '';
 let usingDemo = false;
 
-// ── storage (window.storage — no localStorage) ────────────────────────────────
+// chart state
+let currentTicker = null;
+let currentRange  = '1y';
+let chartPoints   = [];
+
+// ── storage ───────────────────────────────────────────────────────────────────
 async function storageGet(key) {
   try { const r = await window.storage.get(key); return r ? r.value : null; }
   catch { return null; }
@@ -198,13 +314,10 @@ async function storageSet(key, val) {
 async function init() {
   const saved = await storageGet('tickers');
   tickers = saved ? JSON.parse(saved) : ['AAPL','MSFT','GOOGL','AMZN','NVDA'];
-
   gsUrl = (await storageGet('gsUrl')) || '';
   const dismissed = (await storageGet('bannerDismissed')) === '1';
-
   if (gsUrl) document.getElementById('gsUrlInput').value = gsUrl;
   if (dismissed) document.getElementById('setupBanner').style.display = 'none';
-
   renderSkeletons();
   await fetchAll();
 }
@@ -238,10 +351,9 @@ async function dismissBanner() {
   await storageSet('bannerDismissed', '1');
 }
 
-// ── fetch ─────────────────────────────────────────────────────────────────────
+// ── fetch quotes ──────────────────────────────────────────────────────────────
 async function fetchAll() {
   if (tickers.length === 0) { renderCards(); return; }
-
   const dot = document.getElementById('statusDot');
   const btn = document.getElementById('refreshBtn');
   dot.className = 'dot loading';
@@ -249,65 +361,81 @@ async function fetchAll() {
   document.getElementById('lastUpdate').textContent = 'Updating…';
 
   if (gsUrl) {
-    try {
-      await fetchFromGS();
-      usingDemo = false;
-    } catch(err) {
+    try { await fetchFromGS(); usingDemo = false; }
+    catch(err) {
       console.warn('GS fetch failed:', err);
-      showToast('Live fetch failed — check your GS URL', 'error');
-      usingDemo = true;
-      fetchDemoData();
+      showToast('GS failed — trying Yahoo Finance…', 'error');
+      try { await fetchLiveQuotes(); usingDemo = false; }
+      catch(err2) { console.warn('Yahoo also failed:', err2); usingDemo = true; seedDemoData(); }
     }
   } else {
-    usingDemo = true;
-    fetchDemoData();
+    // No GAS configured — go straight to Yahoo Finance
+    try { await fetchLiveQuotes(); usingDemo = false; }
+    catch(err) { console.warn('Yahoo fetch failed (sandbox?):', err); usingDemo = true; seedDemoData(); }
   }
 
   dot.className = usingDemo ? 'dot error' : 'dot';
   btn.classList.remove('spinning');
-
   const now = new Date();
-  const timeStr = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-  document.getElementById('lastUpdate').textContent = usingDemo ? `demo · ${timeStr}` : timeStr;
-
+  const ts = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  document.getElementById('lastUpdate').textContent = usingDemo ? `demo · ${ts}` : `live · ${ts}`;
   renderCards();
   renderSummary();
 }
 
 async function fetchFromGS() {
-  // GAS /exec URLs issue a 302 redirect before serving the response.
-  // redirect:'follow' + no custom headers keeps the request simple (no preflight).
   const url = `${gsUrl}?symbols=${encodeURIComponent(tickers.join(','))}`;
   const res = await fetch(url, { redirect: 'follow' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
   let json;
-  try { json = JSON.parse(text); }
-  catch { throw new Error('Response was not JSON — check your GAS deployment'); }
+  try { json = JSON.parse(text); } catch { throw new Error('Response was not JSON'); }
   if (json.error) throw new Error(json.error);
   if (!json.data) throw new Error('Unexpected response shape');
   json.data.forEach(d => { if (!d.error) stockData[d.symbol] = d; });
 }
 
-function fetchDemoData() {
-  const BASE = {
-    AAPL:195.3, MSFT:415.8, GOOGL:178.5, AMZN:192.4, NVDA:875.6,
-    META:527.3,  TSLA:182.0, AMD:156.4,  NFLX:645.2, JPM:210.5,
-    V:279.3,     MA:476.8,   DIS:110.2,  SPOT:348.9,  UBER:79.4,
-    PLTR:24.1,   COIN:230.5, SOFI:8.4,   MSTR:1420.0, ARM:118.7,
-  };
-  tickers.forEach(t => {
-    const base = BASE[t] || (Math.abs(t.split('').reduce((a,c)=>a*31+c.charCodeAt(0),1)) % 300 + 20);
-    const seed = t.split('').reduce((a,c) => a * 31 + c.charCodeAt(0), 1);
-    const rng  = ((seed * 9301 + 49297) % 233280) / 233280;
-    const change = (rng - 0.47) * base * 0.06;
-    stockData[t] = {
+// Fetch live quotes from Yahoo Finance (works in any real browser, no API key)
+async function fetchLiveQuotes() {
+  const results = await Promise.allSettled(tickers.map(async t => {
+    // Use the chart endpoint — its meta block always has regularMarketPrice + previousClose
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(t)}?range=1d&interval=1d&includePrePost=false`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const meta = json?.chart?.result?.[0]?.meta;
+    if (!meta?.regularMarketPrice) throw new Error('No price in meta');
+    const price = meta.regularMarketPrice;
+    const prev  = meta.previousClose || meta.chartPreviousClose || price;
+    const change = +(price - prev).toFixed(2);
+    const changePct = +((change / prev) * 100).toFixed(2);
+    return {
       symbol: t,
-      price:         +(base + change).toFixed(2),
-      change:        +change.toFixed(2),
-      changePercent: +((change / base) * 100).toFixed(2),
-      name: t,
+      price:  +price.toFixed(2),
+      change,
+      changePercent: changePct,
+      name: meta.shortName || meta.longName || t,
     };
+  }));
+
+  let anyOk = false;
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') { stockData[tickers[i]] = r.value; anyOk = true; }
+    else console.warn(`Yahoo quote failed for ${tickers[i]}:`, r.reason);
+  });
+  if (!anyOk) throw new Error('All Yahoo quote fetches failed');
+}
+
+// True last-resort fallback — seeded random, clearly marked demo
+function seedDemoData() {
+  tickers.forEach(t => {
+    // Only fill in tickers we don't already have data for
+    if (stockData[t]) return;
+    const seed  = t.split('').reduce((a,c) => a*31+c.charCodeAt(0), 1);
+    const base  = (Math.abs(seed) % 450) + 50;
+    const rng   = ((seed * 9301 + 49297) % 233280) / 233280;
+    const change = (rng - 0.47) * base * 0.06;
+    stockData[t] = { symbol:t, price:+(base+change).toFixed(2), change:+change.toFixed(2), changePercent:+((change/base)*100).toFixed(2), name:t };
   });
 }
 
@@ -339,56 +467,272 @@ function renderCards() {
       <div class="skeleton" style="height:20px;width:88px;margin-bottom:8px;"></div>
       <div class="skeleton" style="height:11px;width:60px;"></div>
     </div>`;
-
-    const isUp    = d.change >= 0;
-    const cls     = isUp ? 'up' : 'down';
-    const sign    = isUp ? '+' : '';
-    const arrow   = isUp ? '▲' : '▼';
+    const isUp = d.change >= 0, cls = isUp?'up':'down';
+    const sign = isUp ? '+' : '', arrow = isUp ? '▲' : '▼';
     const display = mode === 'dollar'
       ? `${sign}$${Math.abs(d.change).toFixed(2)}`
       : `${sign}${d.changePercent.toFixed(2)}%`;
-
-    return `<div class="stock-card">
+    return `<div class="stock-card" onclick="openChart('${t}')">
       <div class="card-top">
         <span class="ticker">${d.symbol}</span>
-        <button class="remove-btn" onclick="removeStock('${t}')">×</button>
+        <button class="remove-btn" onclick="event.stopPropagation();removeStock('${t}')">×</button>
       </div>
       <div class="price">$${d.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <span class="change-badge ${cls}">${arrow} ${display}</span>
       ${d.name && d.name !== d.symbol ? `<div class="card-name">${d.name}</div>` : ''}
+      <div class="card-hint">CLICK FOR CHART</div>
     </div>`;
   }).join('');
 }
 
 function renderSummary() {
-  const bar    = document.getElementById('summaryBar');
+  const bar = document.getElementById('summaryBar');
   const loaded = tickers.filter(t => stockData[t]);
-  if (loaded.length === 0) { bar.style.display = 'none'; return; }
-
+  if (loaded.length === 0) { bar.style.display='none'; return; }
   const gainers = loaded.filter(t => stockData[t].change > 0).length;
   const losers  = loaded.filter(t => stockData[t].change < 0).length;
-  const avgPct  = loaded.reduce((s,t) => s + stockData[t].changePercent, 0) / loaded.length;
-  const sign    = avgPct >= 0 ? '+' : '';
-  const src     = usingDemo ? ' <span style="color:var(--muted);font-size:10px">(demo)</span>' : '';
-
+  const avgPct  = loaded.reduce((s,t) => s+stockData[t].changePercent, 0) / loaded.length;
+  const sign = avgPct >= 0 ? '+' : '';
+  const src  = usingDemo ? ' <span style="color:var(--muted);font-size:10px">(demo)</span>' : '';
   bar.style.display = 'flex';
   bar.innerHTML = `
-    <div class="summary-item">
-      <span class="summary-label">Avg Change${src}</span>
-      <span class="summary-val ${avgPct>=0?'up':'down'}">${sign}${avgPct.toFixed(2)}%</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">Gainers</span>
-      <span class="summary-val up">${gainers}</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">Losers</span>
-      <span class="summary-val down">${losers}</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">Tracking</span>
-      <span class="summary-val">${loaded.length}</span>
-    </div>`;
+    <div class="summary-item"><span class="summary-label">Avg Change${src}</span><span class="summary-val ${avgPct>=0?'up':'down'}">${sign}${avgPct.toFixed(2)}%</span></div>
+    <div class="summary-item"><span class="summary-label">Gainers</span><span class="summary-val up">${gainers}</span></div>
+    <div class="summary-item"><span class="summary-label">Losers</span><span class="summary-val down">${losers}</span></div>
+    <div class="summary-item"><span class="summary-label">Tracking</span><span class="summary-val">${loaded.length}</span></div>`;
+}
+
+// ── chart modal ───────────────────────────────────────────────────────────────
+function openChart(ticker) {
+  currentTicker = ticker;
+  currentRange  = '1y';
+  const d = stockData[ticker] || {};
+
+  document.getElementById('modalTicker').textContent = ticker;
+  document.getElementById('modalName').textContent = (d.name && d.name !== ticker) ? d.name : '';
+  document.getElementById('modalPrice').textContent = d.price ? `$${d.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}` : '—';
+
+  const isUp = (d.change || 0) >= 0;
+  const sign = isUp ? '+' : '';
+  const chEl = document.getElementById('modalChange');
+  chEl.className = `modal-change ${isUp?'up':'down'}`;
+  chEl.textContent = d.change
+    ? `${sign}$${d.change.toFixed(2)}  ${sign}${d.changePercent.toFixed(2)}%`
+    : '';
+
+  // activate 1Y range button
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.range-btn')[3].classList.add('active'); // 1Y
+
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  loadChart(ticker, '1y');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modalOverlay') && !e.target.classList.contains('modal-close')) return;
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ESC key closes modal
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.getElementById('modalOverlay').classList.remove('open'); document.body.style.overflow = ''; } });
+
+function setRange(range) {
+  currentRange = range;
+  document.querySelectorAll('.range-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === rangeLabel(range));
+  });
+  loadChart(currentTicker, range);
+}
+
+function rangeLabel(r) { return {  '1mo':'1M','3mo':'3M','6mo':'6M','1y':'1Y','2y':'2Y','5y':'5Y' }[r] || r; }
+
+async function loadChart(ticker, range) {
+  const svg    = document.getElementById('chartSvg');
+  const loader = document.getElementById('chartLoading');
+  const stats  = document.getElementById('chartStats');
+  svg.style.display = 'none';
+  loader.style.display = 'flex';
+  stats.innerHTML = '';
+  chartPoints = [];
+
+  try {
+    // Yahoo Finance v8 chart API — free, no key, works from any browser
+    const interval = range === '1mo' ? '1d' : range === '3mo' ? '1d' : range === '6mo' ? '1d' : range === '1y' ? '1wk' : range === '2y' ? '1wk' : '1mo';
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=${interval}&includePrePost=false`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Yahoo returned ${res.status}`);
+    const json = await res.json();
+    const result = json.chart?.result?.[0];
+    if (!result) throw new Error('No chart data');
+
+    const closes = result.indicators.quote[0].close;
+    const times  = result.timestamp;
+    // filter nulls
+    chartPoints = times.map((t,i) => ({ t: t*1000, v: closes[i] })).filter(p => p.v != null);
+    if (chartPoints.length < 2) throw new Error('Not enough data points');
+
+    drawChart(chartPoints, ticker);
+    renderChartStats(chartPoints, range);
+  } catch(err) {
+    console.warn('Chart fetch failed, using demo data:', err);
+    chartPoints = generateDemoChart(ticker, range);
+    drawChart(chartPoints, ticker);
+    renderChartStats(chartPoints, range);
+  }
+
+  loader.style.display = 'none';
+  svg.style.display = 'block';
+}
+
+function generateDemoChart(ticker, range) {
+  const days = { '1mo':30,'3mo':90,'6mo':180,'1y':365,'2y':730,'5y':1825 }[range] || 365;
+  const currentPrice = stockData[ticker]?.price || 100;
+  const seed = ticker.split('').reduce((a,c)=>a*31+c.charCodeAt(0),1);
+  const points = [];
+  const steps = Math.min(days, 252); // ~trading days
+  let price = currentPrice * (0.8 + ((seed % 40) / 100)); // start lower for upward trend variation
+  const now = Date.now();
+  const stepMs = (days * 86400000) / steps;
+  for (let i = 0; i <= steps; i++) {
+    const rng = Math.sin(seed * i * 0.1 + i) * 0.5 + 0.5;
+    const drift = 0.0003;
+    const vol   = 0.015;
+    price = price * (1 + drift + (rng - 0.5) * vol * 2);
+    points.push({ t: now - (steps - i) * stepMs, v: +price.toFixed(2) });
+  }
+  // nudge last point to match current price
+  const scale = currentPrice / points[points.length-1].v;
+  return points.map(p => ({ t: p.t, v: +(p.v * scale).toFixed(2) }));
+}
+
+function drawChart(points, ticker) {
+  const W = 712, H = 240, padL = 56, padR = 12, padT = 12, padB = 32;
+  const svg = document.getElementById('chartSvg');
+
+  const vals  = points.map(p => p.v);
+  const minV  = Math.min(...vals);
+  const maxV  = Math.max(...vals);
+  const rangeV = maxV - minV || 1;
+
+  const isUp = points[points.length-1].v >= points[0].v;
+  const color = isUp ? '#22d97a' : '#f04e5a';
+  const colorFade = isUp ? 'rgba(34,217,122,' : 'rgba(240,78,90,';
+
+  const xScale = i => padL + (i / (points.length-1)) * (W - padL - padR);
+  const yScale = v => padT + (1 - (v - minV) / rangeV) * (H - padT - padB);
+
+  // build path
+  const line = points.map((p,i) => `${i===0?'M':'L'}${xScale(i).toFixed(1)},${yScale(p.v).toFixed(1)}`).join(' ');
+  const areaClose = `L${xScale(points.length-1).toFixed(1)},${(H-padB).toFixed(1)} L${xScale(0).toFixed(1)},${(H-padB).toFixed(1)} Z`;
+
+  // y-axis grid lines
+  const gridLines = [];
+  const gridCount = 4;
+  for (let i = 0; i <= gridCount; i++) {
+    const v = minV + (rangeV * i / gridCount);
+    const y = yScale(v).toFixed(1);
+    gridLines.push(`
+      <line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+      <text x="${padL-6}" y="${(+y+4).toFixed(1)}" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(255,255,255,0.25)">$${v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0)}</text>
+    `);
+  }
+
+  // x-axis labels (4 evenly spaced)
+  const xLabels = [];
+  const labelIdxs = [0, Math.floor(points.length*0.33), Math.floor(points.length*0.66), points.length-1];
+  labelIdxs.forEach(idx => {
+    if (!points[idx]) return;
+    const d = new Date(points[idx].t);
+    const label = d.toLocaleDateString('en-US', { month:'short', year:'2-digit' });
+    xLabels.push(`<text x="${xScale(idx).toFixed(1)}" y="${H-8}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(255,255,255,0.25)">${label}</text>`);
+  });
+
+  const gradId = `grad_${ticker}`;
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${colorFade}0.18)"/>
+        <stop offset="100%" stop-color="${colorFade}0)"/>
+      </linearGradient>
+    </defs>
+    ${gridLines.join('')}
+    ${xLabels.join('')}
+    <path d="${line} ${areaClose}" fill="url(#${gradId})"/>
+    <path d="${line}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${xScale(points.length-1).toFixed(1)}" cy="${yScale(points[points.length-1].v).toFixed(1)}" r="3" fill="${color}"/>
+    <rect id="chartHitArea" x="${padL}" y="${padT}" width="${W-padL-padR}" height="${H-padT-padB}" fill="transparent" style="cursor:crosshair"/>
+    <line id="crosshair" x1="0" y1="${padT}" x2="0" y2="${H-padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="3,3" style="display:none"/>
+    <circle id="crosshairDot" cx="0" cy="0" r="4" fill="${color}" stroke="var(--surface)" stroke-width="2" style="display:none"/>
+  `;
+
+  // crosshair interaction
+  const hitArea = document.getElementById('chartHitArea');
+  const crosshair = document.getElementById('crosshair');
+  const dot = document.getElementById('crosshairDot');
+  const tooltip = document.getElementById('chartTooltip');
+  const svgEl = document.getElementById('chartSvg');
+  const wrap  = document.getElementById('chartWrap');
+
+  hitArea.addEventListener('mousemove', e => {
+    const rect = svgEl.getBoundingClientRect();
+    const svgW = rect.width, svgH = rect.height;
+    const mx = (e.clientX - rect.left) * (W / svgW);
+    const my = (e.clientY - rect.top)  * (H / svgH);
+
+    const frac = Math.max(0, Math.min(1, (mx - padL) / (W - padL - padR)));
+    const idx  = Math.round(frac * (points.length - 1));
+    const pt   = points[idx];
+    if (!pt) return;
+
+    const cx = xScale(idx), cy = yScale(pt.v);
+    crosshair.setAttribute('x1', cx.toFixed(1)); crosshair.setAttribute('x2', cx.toFixed(1));
+    crosshair.style.display = '';
+    dot.setAttribute('cx', cx.toFixed(1)); dot.setAttribute('cy', cy.toFixed(1));
+    dot.style.display = '';
+
+    const date  = new Date(pt.t).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    const chg   = pt.v - points[0].v;
+    const pct   = ((chg / points[0].v) * 100).toFixed(2);
+    const chgSign = chg >= 0 ? '+' : '';
+    tooltip.innerHTML = `<span style="color:var(--muted2)">${date}</span>  <strong>$${pt.v.toFixed(2)}</strong>  <span style="color:${chg>=0?'var(--up)':'var(--down)'}">${chgSign}${pct}%</span>`;
+    tooltip.classList.add('visible');
+
+    // position tooltip
+    const tx = (cx / W) * svgEl.clientWidth;
+    const ty = (cy / H) * svgEl.clientHeight;
+    const tw = tooltip.offsetWidth;
+    const left = tx + 12 + tw > wrap.clientWidth ? tx - tw - 8 : tx + 12;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top  = Math.max(0, ty - 20) + 'px';
+  });
+
+  hitArea.addEventListener('mouseleave', () => {
+    crosshair.style.display = 'none';
+    dot.style.display = 'none';
+    tooltip.classList.remove('visible');
+  });
+}
+
+function renderChartStats(points, range) {
+  const first = points[0].v, last = points[points.length-1].v;
+  const chg   = last - first;
+  const pct   = ((chg / first) * 100).toFixed(2);
+  const sign  = chg >= 0 ? '+' : '';
+  const cls   = chg >= 0 ? 'up' : 'down';
+  const high  = Math.max(...points.map(p=>p.v));
+  const low   = Math.min(...points.map(p=>p.v));
+  const label = { '1mo':'1 Month','3mo':'3 Months','6mo':'6 Months','1y':'1 Year','2y':'2 Years','5y':'5 Years' }[range] || range;
+
+  document.getElementById('chartStats').innerHTML = `
+    <div class="cstat"><span class="cstat-label">${label} Return</span><span class="cstat-val ${cls}">${sign}${pct}%</span></div>
+    <div class="cstat"><span class="cstat-label">${label} Change</span><span class="cstat-val ${cls}">${sign}$${Math.abs(chg).toFixed(2)}</span></div>
+    <div class="cstat"><span class="cstat-label">Period High</span><span class="cstat-val">$${high.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+    <div class="cstat"><span class="cstat-label">Period Low</span><span class="cstat-val">$${low.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+    <div class="cstat"><span class="cstat-label">Data Points</span><span class="cstat-val">${points.length}</span></div>`;
 }
 
 // ── add / remove ──────────────────────────────────────────────────────────────
@@ -396,11 +740,7 @@ async function addStock() {
   const input  = document.getElementById('tickerInput');
   const ticker = input.value.trim().toUpperCase().replace(/[^A-Z.]/g,'');
   if (!ticker) return;
-  if (tickers.includes(ticker)) {
-    showToast(`${ticker} is already on your list`, 'error');
-    input.value = '';
-    return;
-  }
+  if (tickers.includes(ticker)) { showToast(`${ticker} is already on your list`, 'error'); input.value=''; return; }
   tickers.push(ticker);
   await save();
   input.value = '';
@@ -418,21 +758,17 @@ async function removeStock(ticker) {
   showToast(`${ticker} removed`);
 }
 
-async function save() {
-  await storageSet('tickers', JSON.stringify(tickers));
-}
+async function save() { await storageSet('tickers', JSON.stringify(tickers)); }
 
 // ── toast ─────────────────────────────────────────────────────────────────────
 let toastTimer;
-function showToast(msg, type = '') {
+function showToast(msg, type='') {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast show ${type}`;
+  el.textContent = msg; el.className = `toast show ${type}`;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = 'toast'; }, 2800);
+  toastTimer = setTimeout(() => { el.className='toast'; }, 2800);
 }
 
-// ── go ────────────────────────────────────────────────────────────────────────
 init();
 setInterval(fetchAll, 60000);
 </script>
