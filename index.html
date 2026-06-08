@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watchlist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0c0f; --surface: #111418; --surface2: #181d24;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0; --muted: #5a6478; --muted2: #8291a8;
+    --up: #22d97a; --down: #f04e5a;
+    --up-bg: rgba(34,217,122,0.08); --down-bg: rgba(240,78,90,0.08);
+    --accent: #4f9cff; --accent-bg: rgba(79,156,255,0.1);
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+  /* ── header ── */
+  .header { border-bottom: 1px solid var(--border); padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg); z-index: 100; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--up); animation: pulse 2s infinite; }
+  .dot.error { background: var(--down); }
+  .dot.loading { background: var(--muted2); }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .last-update { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+  .toggle-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .toggle-btn { font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 7px 16px; background: transparent; border: none; color: var(--muted2); cursor: pointer; transition: all 0.15s; letter-spacing: 0.06em; }
+  .toggle-btn.active { background: var(--surface2); color: var(--text); }
+
+  /* ── main ── */
+  .main { padding: 28px; max-width: 980px; margin: 0 auto; }
+
+  /* ── setup banner ── */
+  .setup-banner { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 16px 20px; margin-bottom: 28px; display: flex; align-items: flex-start; gap: 16px; }
+  .setup-banner-content { flex: 1; }
+  .setup-banner h3 { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+  .setup-steps { list-style: none; margin-bottom: 14px; }
+  .setup-steps li { font-size: 12px; color: var(--muted2); line-height: 1.7; padding-left: 18px; position: relative; }
+  .setup-steps li::before { content: attr(data-n); position: absolute; left: 0; color: var(--accent); font-family: var(--mono); font-size: 11px; }
+  .setup-steps code { font-family: var(--mono); font-size: 11px; background: var(--surface2); padding: 1px 5px; border-radius: 3px; color: var(--text); }
+  .gs-url-row { display: flex; gap: 8px; }
+  .gs-url-input { font-family: var(--mono); font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text); flex: 1; outline: none; transition: border-color 0.15s; }
+  .gs-url-input:focus { border-color: var(--accent); }
+  .gs-url-input.invalid { border-color: var(--down); }
+  .gs-save-btn { font-family: var(--mono); font-size: 11px; font-weight: 500; background: var(--accent-bg); border: 1px solid rgba(79,156,255,0.25); border-radius: 6px; padding: 8px 16px; color: var(--accent); cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .gs-save-btn:hover { background: rgba(79,156,255,0.2); }
+  .dismiss-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; padding: 0; transition: color 0.15s; flex-shrink: 0; }
+  .dismiss-btn:hover { color: var(--text); }
+
+  /* ── mode indicator ── */
+  .mode-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; margin-bottom: 20px; }
+  .mode-pill span { color: var(--accent); }
+
+  /* ── summary bar ── */
+  .summary-bar { display: flex; gap: 28px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .summary-item { display: flex; flex-direction: column; gap: 4px; }
+  .summary-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .summary-val { font-family: var(--mono); font-size: 15px; font-weight: 500; }
+  .summary-val.up { color: var(--up); }
+  .summary-val.down { color: var(--down); }
+
+  /* ── section header ── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-title { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .refresh-btn { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; color: var(--muted2); cursor: pointer; transition: all 0.15s; }
+  .refresh-btn:hover { border-color: var(--border2); color: var(--text); }
+  .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── stock grid ── */
+  .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 10px; margin-bottom: 36px; }
+  .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; transition: border-color 0.15s, background 0.15s; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)} }
+  .stock-card:hover { border-color: var(--border2); background: var(--surface2); }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .ticker { font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: 0.04em; }
+  .remove-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s, border-color 0.15s, color 0.15s; line-height: 1; }
+  .stock-card:hover .remove-btn { opacity: 1; }
+  .remove-btn:hover { border-color: var(--down); color: var(--down); }
+  .price { font-family: var(--mono); font-size: 20px; font-weight: 500; margin-bottom: 6px; letter-spacing: -0.02em; }
+  .change-badge { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.03em; }
+  .change-badge.up { background: var(--up-bg); color: var(--up); }
+  .change-badge.down { background: var(--down-bg); color: var(--down); }
+  .card-name { font-size: 10px; color: var(--muted); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-error { font-family: var(--mono); font-size: 10px; color: var(--down); margin-top: 6px; opacity: 0.7; }
+
+  /* ── skeleton ── */
+  .loading-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; overflow: hidden; }
+  .skeleton { background: var(--surface2); border-radius: 4px; position: relative; overflow: hidden; }
+  .skeleton::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent); animation:shimmer 1.4s infinite; }
+  @keyframes shimmer { from{transform:translateX(-100%)}to{transform:translateX(100%)} }
+
+  /* ── add form ── */
+  .add-form { display: flex; gap: 10px; align-items: center; }
+  .ticker-input { font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text); width: 160px; outline: none; transition: border-color 0.15s; }
+  .ticker-input::placeholder { text-transform: none; color: var(--muted); letter-spacing: 0; font-weight: 400; }
+  .ticker-input:focus { border-color: var(--accent); }
+  .add-btn { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; background: var(--accent-bg); border: 1px solid rgba(79,156,255,0.25); border-radius: 8px; padding: 10px 20px; color: var(--accent); cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap; }
+  .add-btn:hover { background: rgba(79,156,255,0.18); border-color: rgba(79,156,255,0.4); }
+
+  /* ── empty ── */
+  .empty-state { grid-column: 1/-1; text-align: center; padding: 56px 0; }
+  .empty-state p { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+  /* ── toast ── */
+  .toast { position: fixed; bottom: 28px; right: 28px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 11px 18px; font-family: var(--mono); font-size: 12px; color: var(--muted2); transform: translateY(8px); opacity: 0; transition: all 0.18s; z-index: 200; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-color: rgba(240,78,90,0.35); color: var(--down); }
+  .toast.success { border-color: rgba(34,217,122,0.35); color: var(--up); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="logo">Watchlist</span>
+    <div class="dot loading" id="statusDot"></div>
+    <span class="last-update" id="lastUpdate">Loading…</span>
+  </div>
+  <div class="toggle-group">
+    <button class="toggle-btn active" id="toggleDollar" onclick="setMode('dollar')">$ Change</button>
+    <button class="toggle-btn" id="togglePct" onclick="setMode('pct')">% Change</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Setup banner -->
+  <div class="setup-banner" id="setupBanner">
+    <div class="setup-banner-content">
+      <h3>Connect Live Data via Google Apps Script</h3>
+      <ul class="setup-steps">
+        <li data-n="1.">Go to <code>script.google.com</code> → New Project, paste <code>Code.gs</code></li>
+        <li data-n="2.">Click <code>Deploy → New Deployment → Web App</code></li>
+        <li data-n="3.">Set <code>Execute as: Me</code> and <code>Who has access: Anyone</code></li>
+        <li data-n="4.">Copy the <code>/exec</code> URL and paste it below</li>
+      </ul>
+      <div class="gs-url-row">
+        <input class="gs-url-input" id="gsUrlInput" placeholder="https://script.google.com/macros/s/…/exec" />
+        <button class="gs-save-btn" onclick="saveGsUrl()">Save & Connect</button>
+      </div>
+    </div>
+    <button class="dismiss-btn" onclick="dismissBanner()" title="Dismiss (use demo data)">×</button>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-bar" id="summaryBar" style="display:none;"></div>
+
+  <!-- Grid header -->
+  <div class="section-header">
+    <span class="section-title" id="watchlistLabel">Watching — 0 stocks</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="fetchAll()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M23 4v6h-6M1 20v-6h6"/>
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+
+  <!-- Cards -->
+  <div class="stock-grid" id="stockGrid"></div>
+
+  <!-- Add form -->
+  <div class="add-form">
+    <input class="ticker-input" id="tickerInput" placeholder="Ticker, e.g. AAPL" maxlength="10"
+           onkeydown="if(event.key==='Enter')addStock()" />
+    <button class="add-btn" onclick="addStock()">+ Add Stock</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── state ─────────────────────────────────────────────────────────────────────
+let mode    = 'dollar';
+let tickers = [];
+let stockData = {};
+let gsUrl   = '';
+let usingDemo = false;
+
+// ── storage (window.storage — no localStorage) ────────────────────────────────
+async function storageGet(key) {
+  try { const r = await window.storage.get(key); return r ? r.value : null; }
+  catch { return null; }
+}
+async function storageSet(key, val) {
+  try { await window.storage.set(key, val); } catch(e) { console.warn('storage set failed', e); }
+}
+
+// ── boot ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const saved = await storageGet('tickers');
+  tickers = saved ? JSON.parse(saved) : ['AAPL','MSFT','GOOGL','AMZN','NVDA'];
+
+  gsUrl = (await storageGet('gsUrl')) || '';
+  const dismissed = (await storageGet('bannerDismissed')) === '1';
+
+  if (gsUrl) document.getElementById('gsUrlInput').value = gsUrl;
+  if (dismissed) document.getElementById('setupBanner').style.display = 'none';
+
+  renderSkeletons();
+  await fetchAll();
+}
+
+// ── toggle ────────────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('toggleDollar').classList.toggle('active', m === 'dollar');
+  document.getElementById('togglePct').classList.toggle('active', m === 'pct');
+  renderCards();
+}
+
+// ── GS URL ────────────────────────────────────────────────────────────────────
+async function saveGsUrl() {
+  const inp = document.getElementById('gsUrlInput');
+  const val = inp.value.trim();
+  if (!val.startsWith('https://script.google.com/')) {
+    inp.classList.add('invalid');
+    showToast('Paste a valid script.google.com URL', 'error');
+    setTimeout(() => inp.classList.remove('invalid'), 1800);
+    return;
+  }
+  gsUrl = val;
+  await storageSet('gsUrl', gsUrl);
+  showToast('Connected — fetching live data…', 'success');
+  fetchAll();
+}
+
+async function dismissBanner() {
+  document.getElementById('setupBanner').style.display = 'none';
+  await storageSet('bannerDismissed', '1');
+}
+
+// ── fetch ─────────────────────────────────────────────────────────────────────
+async function fetchAll() {
+  if (tickers.length === 0) { renderCards(); return; }
+
+  const dot = document.getElementById('statusDot');
+  const btn = document.getElementById('refreshBtn');
+  dot.className = 'dot loading';
+  btn.classList.add('spinning');
+  document.getElementById('lastUpdate').textContent = 'Updating…';
+
+  if (gsUrl) {
+    try {
+      await fetchFromGS();
+      usingDemo = false;
+    } catch(err) {
+      console.warn('GS fetch failed:', err);
+      showToast('Live fetch failed — check your GS URL', 'error');
+      usingDemo = true;
+      fetchDemoData();
+    }
+  } else {
+    usingDemo = true;
+    fetchDemoData();
+  }
+
+  dot.className = usingDemo ? 'dot error' : 'dot';
+  btn.classList.remove('spinning');
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  document.getElementById('lastUpdate').textContent = usingDemo ? `demo · ${timeStr}` : timeStr;
+
+  renderCards();
+  renderSummary();
+}
+
+async function fetchFromGS() {
+  // GAS /exec URLs issue a 302 redirect before serving the response.
+  // redirect:'follow' + no custom headers keeps the request simple (no preflight).
+  const url = `${gsUrl}?symbols=${encodeURIComponent(tickers.join(','))}`;
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); }
+  catch { throw new Error('Response was not JSON — check your GAS deployment'); }
+  if (json.error) throw new Error(json.error);
+  if (!json.data) throw new Error('Unexpected response shape');
+  json.data.forEach(d => { if (!d.error) stockData[d.symbol] = d; });
+}
+
+function fetchDemoData() {
+  const BASE = {
+    AAPL:195.3, MSFT:415.8, GOOGL:178.5, AMZN:192.4, NVDA:875.6,
+    META:527.3,  TSLA:182.0, AMD:156.4,  NFLX:645.2, JPM:210.5,
+    V:279.3,     MA:476.8,   DIS:110.2,  SPOT:348.9,  UBER:79.4,
+    PLTR:24.1,   COIN:230.5, SOFI:8.4,   MSTR:1420.0, ARM:118.7,
+  };
+  tickers.forEach(t => {
+    const base = BASE[t] || (Math.abs(t.split('').reduce((a,c)=>a*31+c.charCodeAt(0),1)) % 300 + 20);
+    const seed = t.split('').reduce((a,c) => a * 31 + c.charCodeAt(0), 1);
+    const rng  = ((seed * 9301 + 49297) % 233280) / 233280;
+    const change = (rng - 0.47) * base * 0.06;
+    stockData[t] = {
+      symbol: t,
+      price:         +(base + change).toFixed(2),
+      change:        +change.toFixed(2),
+      changePercent: +((change / base) * 100).toFixed(2),
+      name: t,
+    };
+  });
+}
+
+// ── render cards ──────────────────────────────────────────────────────────────
+function renderSkeletons() {
+  document.getElementById('stockGrid').innerHTML = tickers.map(() => `
+    <div class="loading-card">
+      <div class="skeleton" style="height:11px;width:44px;margin-bottom:14px;"></div>
+      <div class="skeleton" style="height:20px;width:88px;margin-bottom:8px;"></div>
+      <div class="skeleton" style="height:11px;width:60px;"></div>
+    </div>`).join('');
+}
+
+function renderCards() {
+  const grid = document.getElementById('stockGrid');
+  document.getElementById('watchlistLabel').textContent =
+    `Watching — ${tickers.length} stock${tickers.length !== 1 ? 's' : ''}`;
+
+  if (tickers.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><p>No stocks yet — add one below.</p></div>';
+    document.getElementById('summaryBar').style.display = 'none';
+    return;
+  }
+
+  grid.innerHTML = tickers.map(t => {
+    const d = stockData[t];
+    if (!d) return `<div class="loading-card">
+      <div class="skeleton" style="height:11px;width:44px;margin-bottom:14px;"></div>
+      <div class="skeleton" style="height:20px;width:88px;margin-bottom:8px;"></div>
+      <div class="skeleton" style="height:11px;width:60px;"></div>
+    </div>`;
+
+    const isUp    = d.change >= 0;
+    const cls     = isUp ? 'up' : 'down';
+    const sign    = isUp ? '+' : '';
+    const arrow   = isUp ? '▲' : '▼';
+    const display = mode === 'dollar'
+      ? `${sign}$${Math.abs(d.change).toFixed(2)}`
+      : `${sign}${d.changePercent.toFixed(2)}%`;
+
+    return `<div class="stock-card">
+      <div class="card-top">
+        <span class="ticker">${d.symbol}</span>
+        <button class="remove-btn" onclick="removeStock('${t}')">×</button>
+      </div>
+      <div class="price">$${d.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <span class="change-badge ${cls}">${arrow} ${display}</span>
+      ${d.name && d.name !== d.symbol ? `<div class="card-name">${d.name}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderSummary() {
+  const bar    = document.getElementById('summaryBar');
+  const loaded = tickers.filter(t => stockData[t]);
+  if (loaded.length === 0) { bar.style.display = 'none'; return; }
+
+  const gainers = loaded.filter(t => stockData[t].change > 0).length;
+  const losers  = loaded.filter(t => stockData[t].change < 0).length;
+  const avgPct  = loaded.reduce((s,t) => s + stockData[t].changePercent, 0) / loaded.length;
+  const sign    = avgPct >= 0 ? '+' : '';
+  const src     = usingDemo ? ' <span style="color:var(--muted);font-size:10px">(demo)</span>' : '';
+
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <div class="summary-item">
+      <span class="summary-label">Avg Change${src}</span>
+      <span class="summary-val ${avgPct>=0?'up':'down'}">${sign}${avgPct.toFixed(2)}%</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Gainers</span>
+      <span class="summary-val up">${gainers}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Losers</span>
+      <span class="summary-val down">${losers}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Tracking</span>
+      <span class="summary-val">${loaded.length}</span>
+    </div>`;
+}
+
+// ── add / remove ──────────────────────────────────────────────────────────────
+async function addStock() {
+  const input  = document.getElementById('tickerInput');
+  const ticker = input.value.trim().toUpperCase().replace(/[^A-Z.]/g,'');
+  if (!ticker) return;
+  if (tickers.includes(ticker)) {
+    showToast(`${ticker} is already on your list`, 'error');
+    input.value = '';
+    return;
+  }
+  tickers.push(ticker);
+  await save();
+  input.value = '';
+  renderSkeletons();
+  await fetchAll();
+  showToast(`${ticker} added`, 'success');
+}
+
+async function removeStock(ticker) {
+  tickers = tickers.filter(t => t !== ticker);
+  delete stockData[ticker];
+  await save();
+  renderCards();
+  renderSummary();
+  showToast(`${ticker} removed`);
+}
+
+async function save() {
+  await storageSet('tickers', JSON.stringify(tickers));
+}
+
+// ── toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 2800);
+}
+
+// ── go ────────────────────────────────────────────────────────────────────────
+init();
+setInterval(fetchAll, 60000);
+</script>
+</body>
+</html>
