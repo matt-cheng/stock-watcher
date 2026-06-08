@@ -70,7 +70,7 @@
 
   /* ── stock grid ── */
   .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 10px; margin-bottom: 36px; }
-  .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; transition: border-color 0.15s, background 0.15s; animation: fadeIn 0.2s ease; cursor: pointer; }
+  .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; transition: border-color 0.15s, background 0.15s, transform 0.15s; animation: fadeIn 0.2s ease; cursor: grab; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)} }
   .stock-card:hover { border-color: var(--border2); background: var(--surface2); }
   .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
@@ -99,6 +99,38 @@
   .ticker-input:focus { border-color: var(--accent); }
   .add-btn { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; background: var(--accent-bg); border: 1px solid rgba(79,156,255,0.25); border-radius: 8px; padding: 10px 20px; color: var(--accent); cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap; }
   .add-btn:hover { background: rgba(79,156,255,0.18); border-color: rgba(79,156,255,0.4); }
+
+  /* ── drag handle ── */
+  .drag-handle {
+    position: absolute; top: 0; left: 0; right: 0; height: 100%;
+    cursor: grab; border-radius: 10px; z-index: 1;
+    pointer-events: none; /* let clicks fall through to card; drag fires on card itself */
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .drag-grip {
+    position: absolute; bottom: 10px; right: 10px;
+    display: flex; flex-direction: column; gap: 3px;
+    opacity: 0; transition: opacity 0.15s; pointer-events: none;
+  }
+  .drag-grip span {
+    display: block; width: 14px; height: 1.5px;
+    background: var(--muted); border-radius: 2px;
+  }
+  .stock-card:hover .drag-grip { opacity: 1; }
+
+  /* drag states */
+  .stock-card.dragging {
+    opacity: 0.35; border-color: var(--accent) !important;
+    background: var(--surface2) !important;
+  }
+  .stock-card.drag-over {
+    border-color: var(--accent) !important;
+    background: var(--accent-bg) !important;
+    transform: scale(1.02);
+  }
+  .stock-grid.drag-active .stock-card:not(.dragging) {
+    transition: transform 0.15s;
+  }
 
   /* ── empty ── */
   .empty-state { grid-column: 1/-1; text-align: center; padding: 56px 0; }
@@ -381,6 +413,7 @@ async function fetchAll() {
   document.getElementById('lastUpdate').textContent = usingDemo ? `demo · ${ts}` : `live · ${ts}`;
   renderCards();
   renderSummary();
+  initDrag();
 }
 
 async function fetchFromGS() {
@@ -472,7 +505,8 @@ function renderCards() {
     const display = mode === 'dollar'
       ? `${sign}$${Math.abs(d.change).toFixed(2)}`
       : `${sign}${d.changePercent.toFixed(2)}%`;
-    return `<div class="stock-card" onclick="openChart('${t}')">
+    return `<div class="stock-card" data-ticker="${t}" draggable="true" onclick="if(!didDrag)openChart('${t}')">
+      <div class="drag-handle" data-drag="${t}"></div>
       <div class="card-top">
         <span class="ticker">${d.symbol}</span>
         <button class="remove-btn" onclick="event.stopPropagation();removeStock('${t}')">×</button>
@@ -480,7 +514,8 @@ function renderCards() {
       <div class="price">$${d.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <span class="change-badge ${cls}">${arrow} ${display}</span>
       ${d.name && d.name !== d.symbol ? `<div class="card-name">${d.name}</div>` : ''}
-      <div class="card-hint">CLICK FOR CHART</div>
+      <div class="card-hint">CLICK FOR CHART · DRAG TO REORDER</div>
+      <div class="drag-grip"><span></span><span></span><span></span></div>
     </div>`;
   }).join('');
 }
@@ -755,6 +790,7 @@ async function removeStock(ticker) {
   await save();
   renderCards();
   renderSummary();
+  initDrag();
   showToast(`${ticker} removed`);
 }
 
@@ -767,6 +803,70 @@ function showToast(msg, type='') {
   el.textContent = msg; el.className = `toast show ${type}`;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.className='toast'; }, 2800);
+}
+
+// ── drag to reorder ───────────────────────────────────────────────────────────
+let dragSrc  = null;
+let didDrag  = false;  // prevent click firing after a drag
+
+function initDrag() {
+  const grid = document.getElementById('stockGrid');
+
+  grid.addEventListener('dragstart', e => {
+    const card = e.target.closest('.stock-card[data-ticker]');
+    if (!card) return;
+    dragSrc = card;
+    didDrag = false;
+    card.classList.add('dragging');
+    grid.classList.add('drag-active');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.dataset.ticker);
+  });
+
+  grid.addEventListener('dragend', e => {
+    const card = e.target.closest('.stock-card[data-ticker]');
+    if (card) { card.classList.remove('dragging'); }
+    grid.classList.remove('drag-active');
+    grid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    dragSrc = null;
+    // Block the subsequent click event for a brief moment
+    setTimeout(() => { didDrag = false; }, 100);
+  });
+
+  grid.addEventListener('dragover', e => {
+    e.preventDefault();
+    didDrag = true;
+    e.dataTransfer.dropEffect = 'move';
+    const target = e.target.closest('.stock-card[data-ticker]');
+    if (!target || target === dragSrc) return;
+    grid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    target.classList.add('drag-over');
+  });
+
+  grid.addEventListener('dragleave', e => {
+    const target = e.target.closest('.stock-card[data-ticker]');
+    if (target) target.classList.remove('drag-over');
+  });
+
+  grid.addEventListener('drop', async e => {
+    e.preventDefault();
+    const target = e.target.closest('.stock-card[data-ticker]');
+    if (!target || !dragSrc || target === dragSrc) return;
+
+    const fromTicker = dragSrc.dataset.ticker;
+    const toTicker   = target.dataset.ticker;
+    const fromIdx    = tickers.indexOf(fromTicker);
+    const toIdx      = tickers.indexOf(toTicker);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    tickers.splice(fromIdx, 1);
+    tickers.splice(toIdx, 0, fromTicker);
+    await save();
+
+    target.classList.remove('drag-over');
+    renderCards();
+    initDrag();
+  });
 }
 
 init();
